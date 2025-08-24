@@ -76,7 +76,7 @@ const fileFilter = (
 };
 
 // Configure multer
-const upload = multer({
+export const upload = multer({
 	storage: storage,
 	fileFilter: fileFilter,
 	limits: {
