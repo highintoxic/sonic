@@ -1,55 +1,30 @@
-import winston from 'winston';
+// Simple console-based logger to replace winston
+const getTimestamp = () =>
+	new Date().toISOString().replace("T", " ").split(".")[0];
 
-const logLevel = process.env.LOG_LEVEL || 'info';
-
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.prettyPrint()
-);
-
-const consoleFormat = winston.format.combine(
-  winston.format.colorize({ all: true }),
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    const metaString = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-    return `${timestamp} [${level}]: ${message} ${metaString}`;
-  })
-);
-
-const transports: winston.transport[] = [
-  new winston.transports.Console({
-    format: consoleFormat,
-    level: logLevel,
-  }),
-];
-
-// Add file transport for production
-if (process.env.NODE_ENV === 'production') {
-  transports.push(
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      format: logFormat,
-    }),
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-      format: logFormat,
-    })
-  );
-}
-
-export const logger = winston.createLogger({
-  level: logLevel,
-  format: logFormat,
-  transports,
-  exitOnError: false,
-});
+export const logger = {
+	info: (message: string, meta?: any) => {
+		const metaString = meta ? ` ${JSON.stringify(meta)}` : "";
+		console.log(`${getTimestamp()} [INFO]: ${message}${metaString}`);
+	},
+	error: (message: string, meta?: any) => {
+		const metaString = meta ? ` ${JSON.stringify(meta)}` : "";
+		console.error(`${getTimestamp()} [ERROR]: ${message}${metaString}`);
+	},
+	warn: (message: string, meta?: any) => {
+		const metaString = meta ? ` ${JSON.stringify(meta)}` : "";
+		console.warn(`${getTimestamp()} [WARN]: ${message}${metaString}`);
+	},
+	debug: (message: string, meta?: any) => {
+		const metaString = meta ? ` ${JSON.stringify(meta)}` : "";
+		console.debug(`${getTimestamp()} [DEBUG]: ${message}${metaString}`);
+	},
+};
 
 // Create a stream object with a 'write' function that will be used by morgan
 export const loggerStream = {
-  write: (message: string) => {
-    logger.info(message.trim());
-  },
+	write: (message: string) => {
+		// Morgan messages already include timestamp and formatting, so just log directly
+		console.log(message.trim());
+	},
 };

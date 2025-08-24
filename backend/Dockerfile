@@ -2,12 +2,15 @@
 
 FROM node:18-alpine AS base
 
+# Install FFmpeg and other dependencies
+RUN apk add --no-cache ffmpeg
+
 # Install pnpm
 RUN npm install -g pnpm
 
 # 1. Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat ffmpeg
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager

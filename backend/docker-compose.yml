@@ -1,16 +1,55 @@
-version: '3.8'
+version: "3.8"
+
 services:
+  # PostgreSQL Database
   db:
-    image: postgres:13
+    image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: shazam
+      POSTGRES_USER: shazam_user
+      POSTGRES_PASSWORD: shazam_password
+      POSTGRES_DB: shazam_clone
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shazam_user -d shazam_clone"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Shazam Clone Application
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://shazam_user:shazam_password@db:5432/shazam_clone?schema=public
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Redis for caching (future enhancement)
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: always
+  #   ports:
+  #     - '6379:6379'
+  #   volumes:
+  #     - redis_data:/data
 
 volumes:
   postgres_data:
+  # redis_data:

@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
 
-const router: Router = Router();rt { Router } from "express";
-import { UserController } from "../controllers/user.controller";
-
-const router = Router();
+const router: Router = Router();
 
 // GET /api/users - Get all users
 router.get("/", UserController.getAllUsers);
