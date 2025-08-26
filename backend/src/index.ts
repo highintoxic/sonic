@@ -6,6 +6,7 @@ import routes from "./routes";
 import { logger, loggerStream } from "./utils/logger";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger";
+import { connectToDatabase, prisma } from "./utils/prisma";
 
 dotenv.config();
 
@@ -24,12 +25,26 @@ app.use(morgan("combined", { stream: loggerStream }));
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
-app.get("/", (req: Request, res: Response) => {
+app.get("/", async (req: Request, res: Response) => {
 	logger.info("Health check endpoint accessed");
+
+	// Check database connection status
+	let databaseStatus = "unknown";
+	try {
+		await prisma.$queryRaw`SELECT 1`;
+		databaseStatus = "connected";
+	} catch (error) {
+		databaseStatus = "disconnected";
+		logger.warn("Database health check failed:", {
+			error: error instanceof Error ? error.message : "Unknown error",
+		});
+	}
+
 	res.json({
 		message: "Shazam Clone API",
 		version: "1.0.0",
 		status: "running",
+		database: databaseStatus,
 		timestamp: new Date().toISOString(),
 	});
 });
@@ -71,17 +86,56 @@ app.use((req: Request, res: Response) => {
 });
 
 // Graceful shutdown
-const gracefulShutdown = (signal: string) => {
+const gracefulShutdown = async (signal: string) => {
 	logger.info(`Received ${signal}, shutting down gracefully`);
+
+	try {
+		// Disconnect from database
+		await prisma.$disconnect();
+		logger.info("Database connection closed");
+	} catch (error) {
+		logger.error("Error closing database connection:", {
+			error: error instanceof Error ? error.message : "Unknown error",
+		});
+	}
+
 	process.exit(0);
 };
 
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
-app.listen(port, () => {
-	logger.info(`🚀 Server is running at http://localhost:${port}`, {
-		port: port,
-		environment: process.env.NODE_ENV || "development",
+// Start server with database connection check
+async function startServer() {
+	try {
+		// First, try to connect to the database
+		await connectToDatabase();
+
+		// Start the server only if database connection is successful
+		app.listen(port, () => {
+			logger.info(`🚀 Server is running at http://localhost:${port}`, {
+				port: port,
+				environment: process.env.NODE_ENV || "development",
+				database: "connected",
+			});
+			logger.info(
+				`📖 API Documentation available at http://localhost:${port}/docs`
+			);
+		});
+	} catch (error) {
+		logger.error("Failed to start server:", {
+			error: error instanceof Error ? error.message : "Unknown error",
+		});
+		logger.error("💥 Shutting down due to database connection failure");
+		process.exit(1);
+	}
+}
+
+// Start the application
+startServer().catch((error) => {
+	logger.error("Unexpected error during server startup:", {
+		error: error instanceof Error ? error.message : "Unknown error",
+		stack: error instanceof Error ? error.stack : undefined,
 	});
+	process.exit(1);
 });

@@ -56,9 +56,16 @@ export class DatabaseService {
 	): Promise<void> {
 		try {
 			const batchSize = 1000; // Process in batches to avoid memory issues
+			const startTime = Date.now();
+
+			logger.info(
+				`📊 Starting fingerprint insertion: ${fingerprints.length} fingerprints for song ID ${songId}`
+			);
 
 			for (let i = 0; i < fingerprints.length; i += batchSize) {
 				const batch = fingerprints.slice(i, i + batchSize);
+				const batchNum = Math.floor(i / batchSize) + 1;
+				const totalBatches = Math.ceil(fingerprints.length / batchSize);
 
 				await this.db.fingerprint.createMany({
 					data: batch.map((fp) => ({
@@ -68,10 +75,17 @@ export class DatabaseService {
 					})),
 					skipDuplicates: true,
 				});
+
+				if (totalBatches > 1) {
+					logger.debug(
+						`✅ Batch ${batchNum}/${totalBatches} completed (${batch.length} fingerprints)`
+					);
+				}
 			}
 
+			const duration = Date.now() - startTime;
 			logger.info(
-				`Added ${fingerprints.length} fingerprints for song ID: ${songId}`
+				`🎉 Successfully added ${fingerprints.length} fingerprints for song ID ${songId} in ${duration}ms`
 			);
 		} catch (error) {
 			logger.error(
