@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { Turntable } from "@/components/Turntable";
 import { FloatingNav } from "@/components/FloatingNav";
@@ -8,12 +8,22 @@ import { useToast } from "@/hooks/use-toast";
 import { useShazam } from "@/hooks/use-shazam";
 import { validateAudioFile } from "@/utils/api-test";
 import { IdentifySongResponse } from "@/types/api";
-import { Disc3, Volume2, AlertCircle, Clock, Target } from "lucide-react";
+import {
+	Disc3,
+	Volume2,
+	AlertCircle,
+	Clock,
+	Target,
+	Mic,
+	Square,
+} from "lucide-react";
 
 const Index = () => {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [result, setResult] = useState<IdentifySongResponse | null>(null);
 	const [noMatch, setNoMatch] = useState(false);
+	const [isRecording, setIsRecording] = useState(false);
+	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 	const { toast } = useToast();
 	const {
 		identifySong,
@@ -75,6 +85,105 @@ const Index = () => {
 		}
 	};
 
+	const handleStartRecording = async () => {
+		try {
+			// Clear previous results
+			setResult(null);
+			setNoMatch(false);
+			clearError();
+
+			const audioSettings = {
+				audio: {
+					sampleRate: 44100, // CD quality
+					channelCount: 1, // Mono
+					echoCancellation: false,
+					noiseSuppression: false,
+				},
+			};
+			const stream = await navigator.mediaDevices.getUserMedia(audioSettings);
+			const mediaRecorder = new MediaRecorder(stream, {
+				mimeType: "audio/webm",
+			});
+			const chunks: BlobPart[] = [];
+
+			mediaRecorder.ondataavailable = (event) => {
+				chunks.push(event.data);
+			};
+
+			mediaRecorder.onstop = async () => {
+				const blob = new Blob(chunks, { type: "audio/webm" });
+				const file = new File([blob], "recorded-audio.webm", {
+					type: "audio/webm",
+				});
+				setSelectedFile(file);
+				setIsRecording(false);
+
+				// Stop all tracks
+				stream.getTracks().forEach((track) => track.stop());
+
+				toast({
+					title: "Recording Complete",
+					description: "Processing audio...",
+				});
+
+				// Automatically identify the recorded song
+				try {
+					const response = await identifySong({ audio: file });
+
+					if (response) {
+						setResult(response);
+						setNoMatch(false);
+						toast({
+							title: "Song Identified!",
+							description: `Found: ${response.song.title} by ${response.song.artist}`,
+						});
+					} else {
+						setResult(null);
+						setNoMatch(true);
+						toast({
+							title: "No Match Found",
+							description: "This song is not in our database",
+							variant: "destructive",
+						});
+					}
+				} catch (err) {
+					// Error is already handled by the hook
+					console.error("Recognition error:", err);
+					setResult(null);
+					setNoMatch(false);
+					toast({
+						title: "Recognition Failed",
+						description: "Could not identify the recorded audio",
+						variant: "destructive",
+					});
+				}
+			};
+
+			mediaRecorderRef.current = mediaRecorder;
+			mediaRecorder.start();
+			setIsRecording(true);
+
+			toast({
+				title: "Recording Started",
+				description:
+					"Play music near your microphone - will auto-identify when stopped",
+			});
+		} catch (error) {
+			console.error(error)
+			toast({
+				title: "Recording Failed",
+				description: "Could not access microphone",
+				variant: "destructive",
+			});
+		}
+	};
+
+	const handleStopRecording = () => {
+		if (mediaRecorderRef.current && isRecording) {
+			mediaRecorderRef.current.stop();
+		}
+	};
+
 	return (
 		<div className='min-h-screen bg-background'>
 			<FloatingNav />
@@ -122,6 +231,28 @@ const Index = () => {
 					{/* Upload Section */}
 					<div className='space-y-6'>
 						<FileUpload onFileSelect={handleFileSelect} />
+						<div className='flex justify-center'>
+							<Button
+								onClick={
+									isRecording ? handleStopRecording : handleStartRecording
+								}
+								variant={isRecording ? "destructive" : "outline"}
+								className='font-mono'
+								size='lg'
+							>
+								{isRecording ? (
+									<>
+										<Square className='mr-2 h-5 w-5' />
+										STOP RECORDING
+									</>
+								) : (
+									<>
+										<Mic className='mr-2 h-5 w-5' />
+										RECORD AUDIO
+									</>
+								)}
+							</Button>
+						</div>
 
 						{selectedFile && (
 							<Card className='p-6 bg-card border-2 border-border'>
@@ -188,7 +319,7 @@ const Index = () => {
 													PROCESSING TIME
 												</p>
 												<p className='font-mono font-bold'>
-													{result.processingTime.toFixed(2)}s
+													{result.processingTime.toFixed(2) as any as number/1000}s
 												</p>
 											</div>
 										</div>

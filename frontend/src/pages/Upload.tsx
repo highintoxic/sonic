@@ -60,8 +60,8 @@ const Upload = () => {
 
 			if (result) {
 				toast({
-					title: "Upload Complete",
-					description: `${result.title} by ${result.artist} has been added to the database`,
+					title: "Upload Successful",
+					description: `${result.title} by ${result.artist} has been queued for processing and will be available in the database shortly`,
 				});
 
 				// Reset form

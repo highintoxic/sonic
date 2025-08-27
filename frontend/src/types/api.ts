@@ -26,6 +26,15 @@ export interface AddSongRequest {
 }
 
 export interface AddSongResponse {
+	processingId: string;
+	title: string;
+	artist: string;
+	album?: string;
+	status: "processing";
+}
+
+// Legacy response type for backward compatibility
+export interface AddSongCompletedResponse {
 	songId: number;
 	title: string;
 	artist: string;

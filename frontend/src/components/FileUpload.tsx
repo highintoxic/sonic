@@ -36,7 +36,7 @@ export const FileUpload = ({
     <div
       {...getRootProps()}
       className={cn(
-        "border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer transition-colors",
+        "border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer transition-colors",
         "hover:border-accent hover:bg-accent/5",
         (isDragActive || dragActive) && "border-accent bg-accent/10",
         className
