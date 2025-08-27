@@ -28,15 +28,20 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install dependencies
+      - name: Generate package-lock.json for npm
         run: |
           cd backend
-          pnpm install --frozen-lockfile
+          pnpm install --package-lock-only
+
+      - name: Install dependencies with npm
+        run: |
+          cd backend
+          npm ci
 
       - name: Build application
         run: |
           cd backend
-          pnpm run build --if-present
+          npm run build --if-present
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
