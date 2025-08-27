@@ -92,38 +92,75 @@ const Index = () => {
 			setNoMatch(false);
 			clearError();
 
+			// Request microphone permission with optimized settings
 			const audioSettings = {
 				audio: {
-					sampleRate: 44100, // CD quality
-					channelCount: 1, // Mono
+					sampleRate: 44100,
+					channelCount: 2, // Stereo for better capture
 					echoCancellation: false,
+					autoGainControl: false,
 					noiseSuppression: false,
 				},
 			};
+
 			const stream = await navigator.mediaDevices.getUserMedia(audioSettings);
+
+			// Use WAV format directly
+			const selectedMimeType = "audio/ogg";
+
 			const mediaRecorder = new MediaRecorder(stream, {
-				mimeType: "audio/webm",
+				mimeType: selectedMimeType,
+				audioBitsPerSecond: 128000, // 128 kbps for good quality
 			});
+
 			const chunks: BlobPart[] = [];
 
 			mediaRecorder.ondataavailable = (event) => {
-				chunks.push(event.data);
+				if (event.data.size > 0) {
+					chunks.push(event.data);
+				}
 			};
 
 			mediaRecorder.onstop = async () => {
-				const blob = new Blob(chunks, { type: "audio/webm" });
-				const file = new File([blob], "recorded-audio.webm", {
-					type: "audio/webm",
+				// Stop all tracks first
+				stream.getTracks().forEach((track) => track.stop());
+
+				if (chunks.length === 0) {
+					toast({
+						title: "Recording Error",
+						description: "No audio data was recorded",
+						variant: "destructive",
+					});
+					setIsRecording(false);
+					return;
+				}
+
+				const blob = new Blob(chunks, { type: "audio/ogg" });
+
+				// Use WAV format
+				const file = new File([blob], "recorded-audio.ogg", {
+					type: "audio/ogg",
 				});
+
+				// Check if the recorded file has content
+				if (file.size === 0) {
+					toast({
+						title: "Recording Error",
+						description: "Recorded file is empty",
+						variant: "destructive",
+					});
+					setIsRecording(false);
+					return;
+				}
+
 				setSelectedFile(file);
 				setIsRecording(false);
 
-				// Stop all tracks
-				stream.getTracks().forEach((track) => track.stop());
-
 				toast({
 					title: "Recording Complete",
-					description: "Processing audio...",
+					description: `Recorded ${(file.size / 1024).toFixed(
+						1
+					)} KB of audio. Processing...`,
 				});
 
 				// Automatically identify the recorded song
@@ -159,20 +196,35 @@ const Index = () => {
 				}
 			};
 
+			mediaRecorder.onerror = (event) => {
+				console.error("MediaRecorder error:", event);
+				stream.getTracks().forEach((track) => track.stop());
+				setIsRecording(false);
+				toast({
+					title: "Recording Error",
+					description: "An error occurred during recording",
+					variant: "destructive",
+				});
+			};
+
 			mediaRecorderRef.current = mediaRecorder;
-			mediaRecorder.start();
+
+			// Start recording with a time slice for better data handling
+			mediaRecorder.start(1000); // Collect data every 1 second
 			setIsRecording(true);
 
 			toast({
 				title: "Recording Started",
-				description:
-					"Play music near your microphone - will auto-identify when stopped",
+				description: `Using ${selectedMimeType}. Play music near your microphone - will auto-identify when stopped`,
 			});
 		} catch (error) {
-			console.error(error)
+			console.error("Recording failed:", error);
 			toast({
 				title: "Recording Failed",
-				description: "Could not access microphone",
+				description:
+					error instanceof Error
+						? error.message
+						: "Could not access microphone",
 				variant: "destructive",
 			});
 		}
@@ -319,7 +371,9 @@ const Index = () => {
 													PROCESSING TIME
 												</p>
 												<p className='font-mono font-bold'>
-													{result.processingTime.toFixed(2) as any as number/1000}s
+													{(result.processingTime.toFixed(2) as any as number) /
+														1000}
+													s
 												</p>
 											</div>
 										</div>
