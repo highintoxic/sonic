@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 env:
-  AZURE_WEBAPP_NAME: sonic    # Set this to your application's name
+  AZURE_WEBAPP_NAME: sonic-api    # Set this to your application's name
   AZURE_WEBAPP_PACKAGE_PATH: './backend'  # Set this to the path to your server folder
   NODE_VERSION: '18.x'                # Set this to the node version to use
 
