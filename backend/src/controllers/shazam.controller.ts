@@ -4,6 +4,12 @@ import { logger } from "../utils/logger";
 import * as path from "path";
 import * as fs from "fs";
 
+interface SongMetadata {
+	title: string;
+	artist: string;
+	album?: string;
+}
+
 export class ShazamController {
 	private shazamService: ShazamService;
 
@@ -47,24 +53,40 @@ export class ShazamController {
 				album: album?.trim() || undefined,
 			};
 
-			// Add song to system
-			const result = await this.shazamService.addSong(req.file.path, metadata);
+			// Generate unique processing ID for tracking
+			const processingId = `song_${Date.now()}_${Math.random()
+				.toString(36)
+				.substr(2, 9)}`;
 
 			logger.info(
-				`Successfully added song: ${metadata.title} by ${metadata.artist}`
+				`Song upload received for processing: ${metadata.title} by ${metadata.artist} (ID: ${processingId})`
 			);
 
-			res.status(201).json({
+			// Return immediate success response
+			res.status(202).json({
 				success: true,
+				message: "Song file received and queued for processing",
 				data: {
-					songId: result.songId,
+					processingId,
 					title: metadata.title,
 					artist: metadata.artist,
 					album: metadata.album,
-					fingerprintsGenerated: result.fingerprintsGenerated,
-					processingTime: result.processingTime,
+					status: "processing",
 				},
 			});
+
+			// Process the song asynchronously in the background
+			this.processSongAsync(req.file.path, metadata, processingId).catch(
+				(error) => {
+					logger.error(
+						`Background processing failed for ${metadata.title} by ${
+							metadata.artist
+						} (ID: ${processingId}): ${
+							error instanceof Error ? error.message : "Unknown error"
+						}`
+					);
+				}
+			);
 		} catch (error) {
 			logger.error(
 				`Error in addSong controller: ${
@@ -79,11 +101,64 @@ export class ShazamController {
 
 			res.status(500).json({
 				success: false,
-				error: "Failed to add song to database",
+				error: "Failed to queue song for processing",
 				details: error instanceof Error ? error.message : "Unknown error",
 			});
 		}
 	};
+
+	/**
+	 * Process song asynchronously in the background
+	 */
+	private async processSongAsync(
+		filePath: string,
+		metadata: SongMetadata,
+		processingId: string
+	): Promise<void> {
+		try {
+			logger.info(
+				`Starting background processing for song: ${metadata.title} by ${metadata.artist} (ID: ${processingId})`
+			);
+
+			const result = await this.shazamService.addSong(filePath, metadata);
+
+			logger.info(
+				`Successfully processed song: ${metadata.title} by ${metadata.artist} (ID: ${processingId}) - Song ID: ${result.songId}, Fingerprints: ${result.fingerprintsGenerated}, Time: ${result.processingTime}ms`
+			);
+		} catch (error) {
+			// Enhanced error logging with specific error types
+			const errorMessage =
+				error instanceof Error ? error.message : "Unknown error";
+
+			if (errorMessage.includes("connection")) {
+				logger.error(
+					`Database connection error while processing song: ${metadata.title} by ${metadata.artist} (ID: ${processingId}) - ${errorMessage}`
+				);
+			} else if (errorMessage.includes("timeout")) {
+				logger.error(
+					`Database timeout error while processing song: ${metadata.title} by ${metadata.artist} (ID: ${processingId}) - ${errorMessage}`
+				);
+			} else if (errorMessage.includes("Transaction failed and rolled back")) {
+				logger.error(
+					`Transaction rollback occurred for song: ${metadata.title} by ${metadata.artist} (ID: ${processingId}) - Database has been reverted to previous state - ${errorMessage}`
+				);
+			} else {
+				logger.error(
+					`Failed to process song: ${metadata.title} by ${metadata.artist} (ID: ${processingId}) - ${errorMessage}`
+				);
+			}
+
+			// Clean up uploaded file on processing error
+			if (fs.existsSync(filePath)) {
+				try {
+					fs.unlinkSync(filePath);
+					logger.info(`Cleaned up file after processing error: ${filePath}`);
+				} catch (cleanupError) {
+					logger.error(`Failed to cleanup file ${filePath}: ${cleanupError}`);
+				}
+			}
+		}
+	}
 
 	/**
 	 * Identify a song from audio clip

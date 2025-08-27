@@ -152,12 +152,12 @@ export class ShazamService {
 				}
 
 				// Record successful query
-				await this.databaseService.recordUserQuery(
-					audioDuration,
-					matchResult.songId,
-					matchResult.confidence,
-					totalProcessingTime
-				);
+				// await this.databaseService.recordUserQuery(
+				// 	audioDuration,
+				// 	matchResult.songId,
+				// 	matchResult.confidence,
+				// 	totalProcessingTime
+				// );
 
 				logger.info(
 					`Song identified successfully: ${song.title} by ${
@@ -181,12 +181,12 @@ export class ShazamService {
 				};
 			} else {
 				// Record failed query
-				await this.databaseService.recordUserQuery(
-					audioDuration,
-					null,
-					null,
-					totalProcessingTime
-				);
+				// await this.databaseService.recordUserQuery(
+				// 	audioDuration,
+				// 	null,
+				// 	null,
+				// 	totalProcessingTime
+				// );
 
 				logger.info("No matching song found");
 
