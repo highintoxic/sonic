@@ -2,44 +2,45 @@ name: Deploy to Azure
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 env:
-  AZURE_WEBAPP_NAME: sonic-api    # Set this to your application's name
-  AZURE_WEBAPP_PACKAGE_PATH: './backend'  # Set this to the path to your server folder
-  NODE_VERSION: '18.x'                # Set this to the node version to use
+  AZURE_WEBAPP_NAME: sonic-api # Azure Web App name
+  AZURE_WEBAPP_PACKAGE_PATH: './backend' # Path to backend
+  NODE_VERSION: '18.x' # Node version
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-    - name: Install dependencies
-      run: |
-        cd backend
-        pnpm install
+      - name: Install pnpm
+        run: npm install -g pnpm
 
-    - name: Build application
-      run: |
-        cd backend
-        pnpm run build --if-present
+      - name: Install dependencies
+        run: |
+          cd backend
+          pnpm install --frozen-lockfile
 
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      - name: Build application
+        run: |
+          cd backend
+          pnpm run build --if-present
 
-  
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
