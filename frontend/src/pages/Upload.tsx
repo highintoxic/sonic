@@ -80,10 +80,10 @@ const Upload = () => {
 		<div className='min-h-screen bg-background'>
 			<FloatingNav />
 
-			<main className='container mx-auto px-4 py-8 pb-32'>
-				<div className='max-w-2xl mx-auto space-y-12'>
+			<main className='container mx-auto px-4 py-8 pb-44'>
+				<div className='max-w-2xl mx-auto space-y-10'>
 					{/* Header */}
-					<div className='text-center space-y-6'>
+					<div className='text-center space-y-4'>
 						<div className='flex justify-center'>
 							<Turntable size='lg' spinning={isUploading} />
 						</div>
