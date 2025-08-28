@@ -1,6 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
+import ffmpegPath from "ffmpeg-static";
+import { path as ffprobePath } from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
+
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
+
 import * as fft from "fft-js";
 import { logger } from "../utils/logger";
 
