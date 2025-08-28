@@ -59,7 +59,7 @@ export const Turntable = ({ size = "md", spinning = false, className }: Turntabl
       {/* Turntable controls */}
       <div className="absolute bottom-4 left-4 flex gap-2">
         <div className="w-3 h-3 bg-accent rounded-full shadow-inner" />
-        <div className="w-3 h-3 bg-muted rounded-full shadow-inner" />
+        <div className="w-3 h-3 bg-secondary-foreground rounded-full shadow-inner" />
       </div>
     </div>
   );
