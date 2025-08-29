@@ -1,6 +1,7 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "sonic-frontend",
   "private": true,
+  "description": "Sonic: Shazam-style audio identification frontend (React + Vite + Tailwind)",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

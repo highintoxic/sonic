@@ -10,9 +10,10 @@ const options: Options = {
 	definition: {
 		openapi: "3.0.3",
 		info: {
-			title: "Shazam Clone API",
+			title: "Sonic API",
 			version,
-			description: "API documentation for the Shazam Clone backend",
+			description:
+				"API documentation for the Sonic (Shazam‑style) audio fingerprinting backend",
 		},
 		servers: [
 			{

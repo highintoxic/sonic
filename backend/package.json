@@ -1,7 +1,7 @@
 {
-  "name": "shazam-clone-backend",
+  "name": "sonic-backend",
   "version": "1.0.0",
-  "description": "A complete Shazam clone backend with audio fingerprinting",
+  "description": "Sonic: Shazam-style audio fingerprinting & identification backend (FFT constellation maps)",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
